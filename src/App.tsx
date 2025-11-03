@@ -100,13 +100,12 @@ function AppContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors">
+    <div className="min-h-screen w-full bg-gray-50 dark:bg-gray-900 transition-colors flex flex-col">
       {/* 🔔 Toast Notifications */}
       <Toaster position="top-center" reverseOrder={false} />
 
       {/* ✅ Header / Navbar */}
-      {/* ✅ Header / Navbar */}
-      <nav className="bg-white dark:bg-gray-800 shadow-md sticky top-0 z-10">
+      <nav className="bg-white dark:bg-gray-800 shadow-md sticky top-0 z-10 w-full">
         <div className="max-w-5xl mx-auto px-4 py-3 flex justify-between items-center">
           {/* Left side: App Name */}
           <div className="flex items-center gap-2 text-xl font-semibold text-gray-800 dark:text-gray-100">
@@ -122,7 +121,7 @@ function AppContent() {
               onChange={(e) => setSelectedType(e.target.value as "all" | "income" | "expense")}
               className="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-md px-3 py-1 outline-none"
             >
-              <option value="all">All Tranasactions</option>
+              <option value="all">All Transactions</option>
               <option value="income">Income</option>
               <option value="expense">Expense</option>
             </select>
@@ -153,7 +152,7 @@ function AppContent() {
               )}
             </button>
 
-            {/* 👤 User info (name + profile pic) */}
+            {/* 👤 User info */}
             {user && (
               <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-700 px-3 py-1 rounded-full">
                 {user.photoURL ? (
@@ -185,8 +184,11 @@ function AppContent() {
           </div>
         </div>
       </nav>
-      {/* Dashboard */}
-      <Dashboard selectedMonth={selectedMonth} selectedType={selectedType} />
+
+      {/* Dashboard should also take full width */}
+      <div className="flex-1 w-full flex justify-center">
+        <Dashboard selectedMonth={selectedMonth} selectedType={selectedType} />
+      </div>
     </div>
   );
 }
