@@ -154,15 +154,30 @@ function AppContent() {
       {/* 🔝 Navbar */}
       <nav className="bg-white dark:bg-gray-800 shadow-md sticky top-0 z-10 p-3 sm:p-4 border-b dark:border-gray-700">
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row justify-between sm:items-center gap-3">
-          {/* Logo */}
+
+          {/* ─── Left side ─── */}
           <div className="flex justify-between items-center w-full sm:w-auto">
             <div className="flex items-center gap-2 text-lg sm:text-xl font-semibold text-gray-800 dark:text-gray-100">
               <Wallet className="text-blue-600 dark:text-blue-400" />
               Expense Tracker
             </div>
 
-            {/* Right buttons (Mobile) */}
+            {/* ─── Mobile controls ─── */}
             <div className="flex items-center gap-3 sm:hidden">
+              {user && (
+                <div className="flex items-center gap-2">
+                  <img
+                    src={user.photoURL || ""}
+                    alt="Profile"
+                    className="w-8 h-8 rounded-full border-2 border-blue-500"
+                    referrerPolicy="no-referrer"
+                  />
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
+                    {user.displayName || "User"}
+                  </span>
+                </div>
+              )}
+
               <button
                 onClick={toggleDarkMode}
                 className="p-2 bg-gray-200 dark:bg-gray-700 rounded-full hover:scale-105 transition-transform"
@@ -174,42 +189,24 @@ function AppContent() {
                 )}
               </button>
 
-              {user && (
-                <>
-                  {user.photoURL ? (
-                    <img
-                      src={user.photoURL}
-                      alt="Profile"
-                      className="w-8 h-8 rounded-full border-2 border-blue-500"
-                      referrerPolicy="no-referrer"
-                    />
-                  ) : (
-                    <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white font-semibold">
-                      {user.displayName?.[0] || "U"}
-                    </div>
-                  )}
-                  <button
-                    onClick={signOut}
-                    className="flex items-center gap-1 text-red-500 hover:text-red-600 text-sm font-medium"
-                  >
-                    <LogOut size={16} />
-                    Logout
-                  </button>
-                </>
-              )}
+              <button
+                onClick={signOut}
+                className="flex items-center gap-1 text-red-500 hover:text-red-600 text-sm font-medium"
+              >
+                <LogOut size={16} /> Logout
+              </button>
             </div>
           </div>
 
-          {/* Filters */}
-          <div className="flex flex-wrap gap-2 justify-between sm:justify-end w-full sm:w-auto">
+          {/* ─── Right side (Filters + Actions for desktop) ─── */}
+          <div className="flex flex-wrap gap-2 justify-between sm:justify-end items-center w-full sm:w-auto">
+            {/* Filters */}
             <select
               value={selectedType}
-              onChange={(e) =>
-                setSelectedType(e.target.value as "all" | "income" | "expense")
-              }
-              className="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-md px-3 py-1 outline-none"
+              onChange={(e) => setSelectedType(e.target.value as any)}
+              className="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-md px-3 py-1"
             >
-              <option value="all">All Transactions</option>
+              <option value="all">All</option>
               <option value="income">Income</option>
               <option value="expense">Expense</option>
             </select>
@@ -217,7 +214,7 @@ function AppContent() {
             <select
               value={selectedMonth}
               onChange={(e) => setSelectedMonth(e.target.value)}
-              className="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-md px-3 py-1 outline-none"
+              className="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-md px-3 py-1"
             >
               <option value="all">All Months</option>
               {availableMonths.map((m) => (
@@ -227,6 +224,7 @@ function AppContent() {
               ))}
             </select>
 
+            {/* Theme Toggle */}
             <button
               onClick={toggleDarkMode}
               className="hidden sm:block p-2 bg-gray-200 dark:bg-gray-700 rounded-full hover:scale-105 transition-transform"
@@ -238,36 +236,31 @@ function AppContent() {
               )}
             </button>
 
-            {/* Desktop User Info */}
-            <div className="hidden sm:flex items-center gap-2 bg-gray-100 dark:bg-gray-700 px-3 py-1 rounded-full">
-              {user.photoURL ? (
+            {/* User Info (Desktop) */}
+            {user && (
+              <div className="hidden sm:flex items-center gap-2">
                 <img
-                  src={user.photoURL}
+                  src={user.photoURL || ""}
                   alt="Profile"
                   className="w-8 h-8 rounded-full border-2 border-blue-500"
                   referrerPolicy="no-referrer"
                 />
-              ) : (
-                <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white font-semibold">
-                  {user.displayName?.[0] || "U"}
-                </div>
-              )}
-              <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
-                {user.displayName || "User"}
-              </span>
-            </div>
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
+                  {user.displayName || "User"}
+                </span>
+              </div>
+            )}
 
+            {/* Logout Button */}
             <button
               onClick={signOut}
               className="hidden sm:flex items-center gap-1 bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-md"
             >
-              <LogOut size={18} />
-              Logout
+              <LogOut size={18} /> Logout
             </button>
           </div>
         </div>
       </nav>
-
       {/* 🧭 Dashboard */}
       <Dashboard selectedMonth={selectedMonth} selectedType={selectedType} />
     </div>

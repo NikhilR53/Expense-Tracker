@@ -8,6 +8,7 @@ import { ChartView } from "../components/ChartView";
 import { Loader2 } from "lucide-react";
 import SpendingTrendChart from "../components/SpendingTrendChart";
 import { collection, query, where, orderBy, getDocs } from "firebase/firestore";
+import { format } from "date-fns";
 import type { Transaction } from "../lib/firebaseTransactions";
 
 type DashboardProps = {
@@ -28,13 +29,9 @@ export default function Dashboard({ selectedMonth, selectedType }: DashboardProp
     setError(null);
 
     try {
-      const q = query(
-        collection(db, "transactions"),
-        where("user_id", "==", user.uid),
-        orderBy("date", "asc")
-      );
-
+      const q = query(collection(db, "transactions"), where("user_id", "==", user.uid), orderBy("date", "asc"));
       const snapshot = await getDocs(q);
+
       const data = snapshot.docs.map((doc) => ({
         id: doc.id,
         ...(doc.data() as Transaction),
@@ -42,30 +39,19 @@ export default function Dashboard({ selectedMonth, selectedType }: DashboardProp
 
       setTransactions(data);
 
-      // Build trend data
       const grouped: Record<string, { income: number; expense: number }> = {};
       data.forEach((t) => {
         const dateObj =
-          (t.date as any)?.seconds
-            ? new Date((t.date as any).seconds * 1000)
-            : new Date(t.date as any);
+          (t.date as any)?.seconds ? new Date((t.date as any).seconds * 1000) : new Date(t.date as any);
         const dateStr = dateObj.toISOString().split("T")[0];
-
         if (!grouped[dateStr]) grouped[dateStr] = { income: 0, expense: 0 };
         if (t.type === "income") grouped[dateStr].income += Number(t.amount);
         else grouped[dateStr].expense += Number(t.amount);
       });
 
-      setTrendData(
-        Object.entries(grouped).map(([date, { income, expense }]) => ({
-          date,
-          income,
-          expense,
-        }))
-      );
+      setTrendData(Object.entries(grouped).map(([date, v]) => ({ date, ...v })));
     } catch (err: any) {
-      console.error("Error fetching transactions:", err);
-      setError(err.message || "Failed to fetch transactions.");
+      setError(err.message);
     } finally {
       setLoading(false);
     }
@@ -75,21 +61,18 @@ export default function Dashboard({ selectedMonth, selectedType }: DashboardProp
     fetchTransactions();
   }, [user]);
 
-  // Apply filters
+  // 🧠 Apply month and type filters
   const filteredTransactions = transactions.filter((t) => {
     const dateObj =
-      (t.date as any)?.seconds
-        ? new Date((t.date as any).seconds * 1000)
-        : new Date(t.date as any);
-    const tMonth = `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, "0")}`;
+      (t.date as any)?.seconds ? new Date((t.date as any).seconds * 1000) : new Date(t.date as any);
+    const formattedMonth = format(dateObj, "MMMM yyyy");
 
-    const matchMonth = selectedMonth === "all" || tMonth === selectedMonth;
+    const matchMonth = selectedMonth === "all" || formattedMonth === selectedMonth;
     const matchType = selectedType === "all" || t.type === selectedType;
 
     return matchMonth && matchType;
   });
 
-  // Compute summary
   const totalIncome = filteredTransactions
     .filter((t) => t.type === "income")
     .reduce((sum, t) => sum + Number(t.amount || 0), 0);
@@ -100,33 +83,19 @@ export default function Dashboard({ selectedMonth, selectedType }: DashboardProp
 
   const balance = totalIncome - totalExpenses;
 
-  if (loading) {
+  if (loading)
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 size={48} className="animate-spin text-blue-600" />
-          <p className="text-gray-600 dark:text-gray-400 text-lg">Loading your transactions...</p>
-        </div>
+        <Loader2 className="animate-spin text-blue-600" size={48} />
       </div>
     );
-  }
 
-  if (error) {
+  if (error)
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 p-4">
-        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 px-6 py-4 rounded-lg max-w-md">
-          <h3 className="font-semibold text-lg mb-2">Error loading data</h3>
-          <p>{error}</p>
-          <button
-            onClick={fetchTransactions}
-            className="mt-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-all"
-          >
-            Retry
-          </button>
-        </div>
+      <div className="text-center text-red-500 mt-10">
+        Failed to load transactions: {error}
       </div>
     );
-  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8 space-y-8">
