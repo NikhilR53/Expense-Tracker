@@ -6,7 +6,7 @@ import Register from "./pages/Register";
 import { Moon, Sun, Wallet, LogOut } from "lucide-react";
 import { useEffect, useState } from "react";
 import { db } from "./lib/firebase";
-import { collection, getDocs, query } from "firebase/firestore";
+import { collection, onSnapshot, query } from "firebase/firestore";
 import { format } from "date-fns";
 
 function AppContent() {
@@ -17,7 +17,7 @@ function AppContent() {
   const [selectedMonth, setSelectedMonth] = useState<string>("all");
   const [availableMonths, setAvailableMonths] = useState<string[]>([]);
 
-  // 🌙 Load theme from localStorage
+  // 🌙 Load theme
   useEffect(() => {
     const isDark = localStorage.getItem("darkMode") === "true";
     setDarkMode(isDark);
@@ -31,8 +31,13 @@ function AppContent() {
     document.documentElement.classList.toggle("dark", newMode);
   };
 
-  // 🧩 Robust Firestore month fetcher with debug logs
+  // 🧩 Live Firestore sync for months
   useEffect(() => {
+    if (!user) {
+      setAvailableMonths([]);
+      return;
+    }
+
     const parseDate = (raw: any): Date | null => {
       if (!raw) return null;
       if (raw instanceof Date) return raw;
@@ -46,67 +51,41 @@ function AppContent() {
       return null;
     };
 
-    const fetchMonths = async () => {
-      if (!user) {
-        setAvailableMonths([]);
-        return;
-      }
+    const q = query(collection(db, "transactions"));
+    const unsubscribe = onSnapshot(q, (snap) => {
+      const months = new Set<string>();
 
-      try {
-        const q = query(collection(db, "transactions"));
-        const snap = await getDocs(q);
+      snap.forEach((doc) => {
+        const data = doc.data();
+        const owner =
+          data.userId ?? data.user_id ?? data.user ?? data.uid ?? data.ownerId;
 
-        if (snap.empty) {
-          console.warn("⚠️ No transactions found in Firestore!");
-          setAvailableMonths([]);
-          return;
+        if (owner !== user.uid) return;
+
+        const rawDate =
+          data.date ??
+          data.timestamp ??
+          data.createdAt ??
+          data.time ??
+          data.addedOn ??
+          data.created_at ??
+          data.ts ??
+          data.created;
+
+        const d = parseDate(rawDate);
+        if (d && !isNaN(d.getTime())) {
+          months.add(format(d, "MMMM yyyy"));
         }
+      });
 
-        const months = new Set<string>();
-        let foundUser = false;
+      const sorted = Array.from(months).sort(
+        (a, b) => new Date(b).getTime() - new Date(a).getTime()
+      );
 
-        snap.forEach((doc) => {
-          const data = doc.data();
-          const owner =
-            data.userId ?? data.user_id ?? data.user ?? data.uid ?? data.ownerId;
+      setAvailableMonths(sorted);
+    });
 
-          if (!owner || owner !== user.uid) return;
-          foundUser = true;
-
-          const rawDate =
-            data.date ??
-            data.timestamp ??
-            data.createdAt ??
-            data.time ??
-            data.addedOn ??
-            data.created_at ??
-            data.ts ??
-            data.created;
-
-          const d = parseDate(rawDate);
-          if (d && !isNaN(d.getTime())) {
-            months.add(format(d, "MMMM yyyy"));
-          } else {
-            console.warn("⛔ Unreadable date in doc:", doc.id, rawDate);
-          }
-        });
-
-        if (!foundUser) {
-          console.warn("⚠️ No transactions matched this user:", user.uid);
-        }
-
-        const sorted = Array.from(months).sort(
-          (a, b) => new Date(b).getTime() - new Date(a).getTime()
-        );
-
-        console.log("✅ Available months:", sorted);
-        setAvailableMonths(sorted);
-      } catch (err) {
-        console.error("🔥 Firestore fetch error:", err);
-      }
-    };
-
-    fetchMonths();
+    return () => unsubscribe();
   }, [user]);
 
   // 🌀 Loading screen
@@ -121,11 +100,11 @@ function AppContent() {
     );
   }
 
-  // 🔐 Not logged in → show Login/Register
+  // 🔐 Not logged in
   if (!user) {
     return (
       <>
-        {/* 🌙 Dark Mode Toggle (Visible on Auth Pages) */}
+        {/* 🌙 Dark Mode Toggle */}
         <button
           onClick={toggleDarkMode}
           className="fixed top-4 right-4 p-3 bg-white dark:bg-gray-800 rounded-full shadow-lg hover:shadow-xl transition-all z-50"
@@ -146,7 +125,7 @@ function AppContent() {
     );
   }
 
-  // ✅ Logged-in user → show dashboard
+  // ✅ Logged-in dashboard
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors">
       <Toaster position="top-center" reverseOrder={false} />
@@ -154,7 +133,6 @@ function AppContent() {
       {/* 🔝 Navbar */}
       <nav className="bg-white dark:bg-gray-800 shadow-md sticky top-0 z-10 p-3 sm:p-4 border-b dark:border-gray-700">
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row justify-between sm:items-center gap-3">
-
           {/* ─── Left side ─── */}
           <div className="flex justify-between items-center w-full sm:w-auto">
             <div className="flex items-center gap-2 text-lg sm:text-xl font-semibold text-gray-800 dark:text-gray-100">
@@ -198,7 +176,7 @@ function AppContent() {
             </div>
           </div>
 
-          {/* ─── Right side (Filters + Actions for desktop) ─── */}
+          {/* ─── Right side (Filters + Actions) ─── */}
           <div className="flex flex-wrap gap-2 justify-between sm:justify-end items-center w-full sm:w-auto">
             {/* Filters */}
             <select
@@ -236,7 +214,7 @@ function AppContent() {
               )}
             </button>
 
-            {/* User Info (Desktop) */}
+            {/* User Info */}
             {user && (
               <div className="hidden sm:flex items-center gap-2">
                 <img
@@ -251,7 +229,7 @@ function AppContent() {
               </div>
             )}
 
-            {/* Logout Button */}
+            {/* Logout */}
             <button
               onClick={signOut}
               className="hidden sm:flex items-center gap-1 bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-md"
@@ -261,6 +239,7 @@ function AppContent() {
           </div>
         </div>
       </nav>
+
       {/* 🧭 Dashboard */}
       <Dashboard selectedMonth={selectedMonth} selectedType={selectedType} />
     </div>
