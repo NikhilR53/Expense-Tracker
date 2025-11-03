@@ -209,7 +209,7 @@ function AppContent() {
               }
               className="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-md px-3 py-1 outline-none"
             >
-              <option value="all">All</option>
+              <option value="all">All Transactions</option>
               <option value="income">Income</option>
               <option value="expense">Expense</option>
             </select>
